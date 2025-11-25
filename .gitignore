@@ -1,0 +1,8 @@
+node_modules/
+__pycache__/
+*.env
+dist/
+build/
+kfood.zip
+kfood/
+food_project/checkpoints_convnext_stratified/
