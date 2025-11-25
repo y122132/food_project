@@ -6,11 +6,133 @@ import torch
 from PIL import Image
 
 from django.conf import settings
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import login
+from rest_framework.permissions import IsAuthenticated
+
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from transformers import AutoImageProcessor, AutoModelForImageClassification
+
+from .models import UserProfile
+from .serializers import UserProfileSerializer
+
+from .models import Meal
+from .serializers import MealSerializer
+
+#Auth
+from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User
+from .serializers import UserSerializer
+
+# Auth 관련 뷰
+@csrf_exempt
+@api_view(["POST"])
+def register_view(request):
+    """
+    회원가입: username, password, email(optional)
+    """
+    username = request.data.get("username")
+    password = request.data.get("password")
+    email = request.data.get("email", "")
+
+    if not username or not password:
+        return Response(
+            {"detail": "username과 password는 필수입니다."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if User.objects.filter(username=username).exists():
+        return Response(
+            {"detail": "이미 존재하는 사용자명입니다."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user = User.objects.create_user(username, email=email, password=password)
+    # 프로필 자동 생성 (signals 써도 되고, 여기서 해도 됨)
+    UserProfile.objects.get_or_create(user=user)
+
+    # ✅ 회원가입 후 바로 로그인 세션 생성
+    login(request, user)
+
+    serializer = UserSerializer(user)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@csrf_exempt
+@api_view(["POST"])
+def login_view(request):
+    """
+    로그인: username, password
+    세션 기반 로그인 (쿠키)
+    """
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    user = authenticate(request, username=username, password=password)
+    if user is None:
+        return Response(
+            {"detail": "아이디 또는 비밀번호가 올바르지 않습니다."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    login(request, user)
+    serializer = UserSerializer(user)
+    return Response(serializer.data)
+
+@csrf_exempt
+@api_view(["POST"])
+def logout_view(request):
+    """
+    로그아웃
+    """
+    logout(request)
+    return Response({"detail": "로그아웃 되었습니다."})
+
+
+# user profile
+@api_view(["GET", "PUT"])
+@permission_classes([IsAuthenticated])
+def user_profile_view(request):
+    """
+    현재 로그인한 유저의 UserProfile 조회/수정
+    GET: 정보 + recommended_kcal 반환
+    PUT: 정보 수정
+    """
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == "GET":
+        serializer = UserProfileSerializer(profile)
+        return Response(serializer.data)
+
+    # PUT
+    serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# 한끼식사 저장
+@csrf_exempt
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def meal_list_create_view(request):
+    user = request.user
+
+    if request.method == "GET":
+        meals = Meal.objects.filter(user=user).order_by("-created_at")[:20]
+        serializer = MealSerializer(meals, many=True)
+        return Response(serializer.data)
+
+    # POST: 새 식사 저장
+    serializer = MealSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # ============================================
 # 1. 경로 설정 (프로젝트 루트 기준)

@@ -55,7 +55,25 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True   # 개발 단계에서만 전체 허용
+# ★ react 주소 정확히 하나만 허용 (중복 X)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+
+# 프론트에서 쿠키 보내므로 필수
+CORS_ALLOW_CREDENTIALS = True  
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# preflight 허용
+CORS_ALLOW_HEADERS = [
+    "content-type",
+    "authorization",
+    "x-csrftoken",
+]
 
 ROOT_URLCONF = 'food.urls'
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 import {
   BarChart,
@@ -12,10 +12,194 @@ import {
   Pie,
   Legend,
 } from "recharts";
+import ProfilePage from "./ProfilePage";
+import MealHistoryPage from "./MealHistoryPage";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
+function AuthBox({ apiBase, currentUser, setCurrentUser }) {
+  const [mode, setMode] = useState("login"); // 'login' | 'register'
+  const [form, setForm] = useState({ username: "", password: "", email: "" });
+  const [msg, setMsg] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMsg("");
+    try {
+      const url =
+        mode === "login"
+          ? `${apiBase}/auth/login/`
+          : `${apiBase}/auth/register/`;
+      const { data } = await axios.post(url, form, {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+      });
+      setCurrentUser(data);
+      setMsg(mode === "login" ? "로그인 성공" : "회원가입 성공");
+    } catch (err) {
+      console.error(err);
+      // 백엔드 응답이 있는 경우
+      if (err.response && err.response.data) {
+        const data = err.response.data;
+
+        // 1) detail 필드가 있는 경우 (예: {"detail": "..."})
+        if (typeof data.detail === "string") {
+          setMsg(data.detail);
+          return;
+        }
+
+        // 2) {"username": ["이미 존재하는 아이디입니다."]} 같은 형태인 경우
+        const messages = [];
+        for (const [field, value] of Object.entries(data)) {
+          if (Array.isArray(value)) {
+            messages.push(`${field}: ${value.join(" ")}`);
+          } else if (typeof value === "string") {
+            messages.push(`${field}: ${value}`);
+          }
+        }
+
+        if (messages.length > 0) {
+          setMsg(messages.join(" / "));
+          return;
+        }
+      }
+
+      // 그래도 못 찾으면 기본 문구
+      setMsg("오류가 발생했습니다. 입력 값을 다시 확인해 주세요.");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axios.post(
+        `${apiBase}/auth/logout/`,
+        {},
+        { withCredentials: true }
+      );
+      setCurrentUser(null);
+      setMsg("로그아웃 되었습니다.");
+    } catch (err) {
+      console.error(err);
+      setMsg("로그아웃 중 오류가 발생했습니다.");
+    }
+  };
+
+  if (currentUser) {
+    return (
+      <div style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
+        <span>
+          안녕하세요, <strong>{currentUser.username}</strong> 님
+        </span>
+        <button
+          onClick={handleLogout}
+          style={{
+            padding: "4px 8px",
+            borderRadius: 999,
+            border: "1px solid #d1d5db",
+            background: "#ffffff",
+            cursor: "pointer",
+          }}
+        >
+          로그아웃
+        </button>
+        {msg && <span style={{ color: "#6b7280" }}>{msg}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        padding: 8,
+        borderRadius: 12,
+        border: "1px solid #e5e7eb",
+        background: "#ffffff",
+        fontSize: 12,
+      }}
+    >
+      <div style={{ marginBottom: 6 }}>
+        <button
+          onClick={() => setMode("login")}
+          style={{
+            padding: "2px 8px",
+            borderRadius: 999,
+            border: "1px solid #d1d5db",
+            background: mode === "login" ? "#2563eb" : "#ffffff",
+            color: mode === "login" ? "#ffffff" : "#4b5563",
+            marginRight: 4,
+            cursor: "pointer",
+          }}
+        >
+          로그인
+        </button>
+        <button
+          onClick={() => setMode("register")}
+          style={{
+            padding: "2px 8px",
+            borderRadius: 999,
+            border: "1px solid #d1d5db",
+            background: mode === "register" ? "#2563eb" : "#ffffff",
+            color: mode === "register" ? "#ffffff" : "#4b5563",
+            cursor: "pointer",
+          }}
+        >
+          회원가입
+        </button>
+      </div>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <input
+          name="username"
+          placeholder="아이디"
+          value={form.username}
+          onChange={handleChange}
+          style={{ padding: 4, borderRadius: 8, border: "1px solid #d1d5db" }}
+        />
+        {mode === "register" && (
+          <input
+            name="email"
+            placeholder="이메일(선택)"
+            value={form.email}
+            onChange={handleChange}
+            style={{ padding: 4, borderRadius: 8, border: "1px solid #d1d5db" }}
+          />
+        )}
+        <input
+          type="password"
+          name="password"
+          placeholder="비밀번호"
+          value={form.password}
+          onChange={handleChange}
+          style={{ padding: 4, borderRadius: 8, border: "1px solid #d1d5db" }}
+        />
+        <button
+          type="submit"
+          style={{
+            marginTop: 4,
+            padding: "4px 8px",
+            borderRadius: 999,
+            border: "none",
+            background: "#16a34a",
+            color: "#ffffff",
+            cursor: "pointer",
+          }}
+        >
+          {mode === "login" ? "로그인" : "회원가입"}
+        </button>
+      </form>
+      {msg && <p style={{ marginTop: 4, color: "#6b7280" }}>{msg}</p>}
+    </div>
+  );
+}
+
 export default function App() {
+  const [currentView, setCurrentView] = useState("analyzer"); // 'analyzer' | 'profile' | 'history'
+  const [currentUser, setCurrentUser] = useState(null);       // {id, username, email} or null
+
   const [step, setStep] = useState(1); // 1: 업로드, 2: 세부 선택, 3: 결과
 
   const [imageFile, setImageFile] = useState(null);
@@ -34,6 +218,31 @@ export default function App() {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // 앱 시작 시 프로필 가져오기
+  useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE}/profile/`, {
+        withCredentials: true, // 세션 인증 쓰면 필요
+      });
+      if (data.recommended_kcal) {
+        setRecommendedKcal(data.recommended_kcal);
+      }
+    } catch (err) {
+      console.error("프로필 불러오기 실패:", err);
+      // 실패해도 그냥 2000 유지
+    }
+  };
+
+  fetchProfile();
+  }, []);
+
+  // 추천칼로리
+  const [recommendedKcal, setRecommendedKcal] = useState(2000); // 기본값 2000
+  //한끼 식사 저장 상태 추가
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   // -----------------------------
   // 공통 카드 스타일
@@ -237,9 +446,6 @@ export default function App() {
     return total;
   }, [mealItems]);
 
-  // 하루 권장 칼로리 (원하면 나중에 설정값으로 뺄 수 있음)
-  const RECOMMENDED_KCAL = 2000;
-
   // 탄/단/지 원형 차트용 데이터
   const macroPieData = useMemo(() => {
     if (!totalNutrition) return [];
@@ -266,9 +472,9 @@ export default function App() {
   const kcalPercent = useMemo(() => {
     if (!totalNutrition) return 0;
     const totalKcal = totalNutrition["에너지(kcal)"] || 0;
-    if (!RECOMMENDED_KCAL) return 0;
-    return Math.round((totalKcal / RECOMMENDED_KCAL) * 100);
-  }, [totalNutrition]);
+    if (!recommendedKcal) return 0;
+    return Math.round((totalKcal / recommendedKcal) * 100);
+  }, [totalNutrition, recommendedKcal]);
 
   // -----------------------------
   // 다른 음식 사진으로 추가하기
@@ -303,6 +509,45 @@ export default function App() {
   };
 
   // -----------------------------
+  // 저장 핸들러 함수
+  // -----------------------------
+  const handleSaveMeal = async () => {
+    if (mealItems.length === 0 || !totalNutrition) {
+      alert("저장할 식사 내용이 없습니다.");
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage("");
+
+    try {
+      const payload = {
+        title: "", // 나중에 "점심", "저녁" 등 입력 필드 추가해도 됨
+        total_kcal: totalNutrition["에너지(kcal)"] || null,
+        items: mealItems.map((item) => ({
+          pred_class: item.pred_class,
+          food_name: item.food_name,
+          weight_g: item.weight_g,
+          nutrition: item.nutrition,
+        })),
+      };
+
+      const { data } = await axios.post(`${API_BASE}/meals/`, payload, {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+      });
+
+      setSaveMessage("✅ 식사가 저장되었습니다.");
+    } catch (err) {
+      console.error(err);
+      setSaveMessage("❌ 식사 저장 중 오류가 발생했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  
+  // -----------------------------
   // 렌더링
   // -----------------------------
   return (
@@ -321,6 +566,7 @@ export default function App() {
             "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         }}
       >
+
         {/* 헤더 */}
         <header
           style={{
@@ -336,21 +582,46 @@ export default function App() {
               음식 사진 → 분류 → 세부 식품 선택 → 섭취 중량에 따른 영양 성분 계산 & 한 끼 총합
             </p>
           </div>
-          <button
-            onClick={resetAll}
-            style={{
-              borderRadius: 999,
-              border: "1px solid #d1d5db",
-              padding: "6px 14px",
-              background: "#ffffff",
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            초기화
-          </button>
+          <AuthBox
+            apiBase={API_BASE}
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+          />
         </header>
 
+        {/* 상단 네비게이션 (뷰 전환) */}
+        <nav
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: 12,
+            fontSize: 13,
+          }}
+        >
+          {[
+            { id: "analyzer", label: "🍱 영양 분석" },
+            { id: "profile", label: "👤 내 프로필" },
+            { id: "history", label: "📜 지난 식사 기록" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setCurrentView(tab.id)}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                border: "1px solid #d1d5db",
+                background: currentView === tab.id ? "#2563eb" : "#ffffff",
+                color: currentView === tab.id ? "#ffffff" : "#4b5563",
+                cursor: "pointer",
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        {currentView === "analyzer" && (
+          <>
         {/* 단계 표시 */}
         <nav
           style={{
@@ -964,7 +1235,7 @@ export default function App() {
                       <strong>
                         {totalNutrition["에너지(kcal)"]?.toFixed(1) ?? 0}
                       </strong>{" "}
-                      kcal / 권장: <strong>{RECOMMENDED_KCAL}</strong> kcal (
+                      kcal / 권장: <strong>{recommendedKcal}</strong> kcal (
                       {Math.min(kcalPercent, 999)}%)
                     </p>
 
@@ -1054,7 +1325,6 @@ export default function App() {
               </div>
             )}
 
-
             {/* 버튼 영역 */}
             <div
               style={{
@@ -1062,39 +1332,81 @@ export default function App() {
                 justifyContent: "space-between",
                 marginTop: 12,
                 gap: 8,
+                alignItems: "center",
               }}
             >
-              <button
-                onClick={goToNewImageForAnotherFood}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  border: "1px solid #d1d5db",
-                  background: "#ffffff",
-                  fontSize: 13,
-                  cursor: "pointer",
-                }}
-              >
-                다른 음식 추가하기
-              </button>
-              <button
-                onClick={resetAll}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: "#2563eb",
-                  color: "#ffffff",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                새로운 식사 시작하기 →
-              </button>
+              <div style={{ fontSize: 12, color: "#6b7280" }}>
+                {saveMessage}
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={handleSaveMeal}
+                  disabled={saving || mealItems.length === 0}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    border: "none",
+                    background:
+                      saving || mealItems.length === 0 ? "#9ca3af" : "#22c55e",
+                    color: "#ffffff",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor:
+                      saving || mealItems.length === 0 ? "default" : "pointer",
+                  }}
+                >
+                  {saving ? "저장 중..." : "이 식사 저장하기"}
+                </button>
+
+                <button
+                  onClick={goToNewImageForAnotherFood}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    border: "1px solid #d1d5db",
+                    background: "#ffffff",
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  다른 음식 사진으로 추가하기
+                </button>
+
+                <button
+                  onClick={resetAll}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    border: "none",
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  새로운 식사 시작하기 →
+                </button>
+              </div>
             </div>
           </section>
         )}
+        </>
+      )}
+
+        {currentView === "profile" && (
+          <ProfilePage
+            apiBase={API_BASE}
+            currentUser={currentUser}
+            setRecommendedKcal={setRecommendedKcal}
+          />
+        )}
+
+        {currentView === "history" && (
+          <MealHistoryPage apiBase={API_BASE} />
+        )}
+
       </div>
     </div>
   );
