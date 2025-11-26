@@ -6,7 +6,7 @@ import torch
 from PIL import Image
 
 from django.conf import settings
-from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from django.contrib.auth import login
 from rest_framework.permissions import IsAuthenticated
@@ -24,13 +24,13 @@ from .serializers import MealSerializer
 
 #Auth
 from django.contrib.auth import authenticate, login, logout
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from .serializers import UserSerializer
 
 # Auth 관련 뷰
-@csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def register_view(request):
     """
     회원가입: username, password, email(optional)
@@ -61,8 +61,9 @@ def register_view(request):
     serializer = UserSerializer(user)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-@csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def login_view(request):
     """
     로그인: username, password
@@ -82,7 +83,6 @@ def login_view(request):
     serializer = UserSerializer(user)
     return Response(serializer.data)
 
-@csrf_exempt
 @api_view(["POST"])
 def logout_view(request):
     """
@@ -115,7 +115,6 @@ def user_profile_view(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # 한끼식사 저장
-@csrf_exempt
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def meal_list_create_view(request):
