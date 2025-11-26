@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from django.utils import timezone
 from .models import UserProfile, Meal, MealItem
 
 
@@ -56,9 +57,38 @@ class MealSerializer(serializers.ModelSerializer):
         fields = ["id", "created_at", "title", "total_kcal", "items"]
 
     def create(self, validated_data):
+        user = self.context['request'].user
         items_data = validated_data.pop("items", [])
-        meal = Meal.objects.create(**validated_data)
+        title = validated_data.get('title')
+        today = timezone.now().date()
+
+        # Find existing meal for this title and day
+        existing_meal = Meal.objects.filter(
+            user=user,
+            title=title,
+            created_at__date=today
+        ).first()
+
+        if existing_meal:
+            meal = existing_meal
+            # Clear all existing items for this meal before adding new ones
+            meal.items.all().delete()
+        else:
+            # If no meal exists, create a new one
+            meal = Meal.objects.create(user=user, **validated_data)
+
+        # Create the new meal items for the meal
         for item_data in items_data:
             MealItem.objects.create(meal=meal, **item_data)
-        return meal
 
+        # Recalculate total_kcal
+        total_kcal = 0
+        for item in meal.items.all():
+            kcal = item.nutrition.get('에너지(kcal)')
+            if kcal:
+                total_kcal += float(kcal)
+        
+        meal.total_kcal = total_kcal
+        meal.save()
+        
+        return meal

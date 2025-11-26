@@ -24,6 +24,8 @@ from .serializers import MealSerializer
 
 #Auth
 from django.contrib.auth import authenticate, login, logout
+from django.utils import timezone
+from datetime import datetime
 from django.contrib.auth.models import User
 from .serializers import UserSerializer
 
@@ -121,14 +123,33 @@ def meal_list_create_view(request):
     user = request.user
 
     if request.method == "GET":
-        meals = Meal.objects.filter(user=user).order_by("-created_at")[:20]
+        # Get date from query params, default to today
+        date_str = request.query_params.get('date', None)
+        
+        target_date = timezone.now().date()
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                # Handle invalid date format, default to today
+                pass
+
+        # Filter meals for the target date
+        meals = Meal.objects.filter(user=user, created_at__date=target_date).order_by("created_at")
+        
         serializer = MealSerializer(meals, many=True)
         return Response(serializer.data)
 
     # POST: 새 식사 저장
-    serializer = MealSerializer(data=request.data)
+    serializer = MealSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
-        serializer.save(user=user)
+        meal_instance = serializer.save() # Get the saved meal instance
+        
+        # If the meal now has no items, delete the meal itself
+        if not meal_instance.items.exists():
+            meal_instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT) # Return 204 No Content for successful deletion
+        
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
