@@ -1,0 +1,121 @@
+.recommender-container {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px auto;
+    max-width: 600px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    font-family: 'Arial', sans-serif;
+}
+
+.recommender-title {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: #1a202c;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.recommender-subtitle {
+    font-size: 0.95rem;
+    color: #4a5568;
+    text-align: center;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.recommender-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.recommender-textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e0;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
+}
+
+.recommender-textarea:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+}
+
+.recommender-button {
+    padding: 12px 20px;
+    border: none;
+    background-image: linear-gradient(to right, #4a90e2, #50e3c2);
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.recommender-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.recommender-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.recommender-loading {
+    text-align: center;
+    margin-top: 24px;
+    color: #4a5568;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: #4a90e2;
+    margin: 0 auto 10px;
+    animation: spin 1s ease infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.recommender-error {
+    margin-top: 16px;
+    padding: 12px;
+    background-color: #fed7d7;
+    color: #c53030;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.recommender-result {
+    margin-top: 24px;
+    padding: 20px;
+    background-color: #f7fafc;
+    border: 1px dashed #cbd5e0;
+    border-radius: 8px;
+}
+
+.recommender-result h3 {
+    margin-top: 0;
+    color: #2d3748;
+    margin-bottom: 12px;
+}
+
+.recommendation-content {
+    font-size: 1rem;
+    color: #4a5568;
+    white-space: pre-wrap; /* To preserve line breaks from the AI response */
+    line-height: 1.6;
+}

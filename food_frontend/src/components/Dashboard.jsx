@@ -4,6 +4,7 @@ import axios from 'axios';
 import MealCard from './MealCard';
 import DailySummary from './DailySummary';
 import FoodAnalyzerModal from './FoodAnalyzerModal';
+import MenuRecommender from './MenuRecommender'; // Import the new component
 import './Dashboard.css'; // Import the new CSS file
 
 const API_BASE = import.meta.env.VITE_API_BASE;
@@ -70,11 +71,22 @@ export default function Dashboard({ currentUser, recommendedKcal }) {
     fetchMealsForToday();
   };
 
+  // --- NEW: Function to call the recommendation API ---
+  const handleGetRecommendation = async (query) => {
+    const { data } = await axios.post(
+      `${API_BASE}/recommend-menu/`, 
+      { query }, 
+      { withCredentials: true }
+    );
+    return data;
+  };
+
   if (loading) return <div>로딩 중...</div>;
   if (error && !currentUser) return <div style={{ color: 'red', textAlign: 'center', marginTop: '40px' }}>{error}</div>;
 
   return (
     <div>
+      <MenuRecommender onRecommend={handleGetRecommendation} /> {/* Pass the function as a prop */}
       <DailySummary meals={Object.values(dailyMeals).filter(m => m)} recommendedKcal={recommendedKcal} />
       <div className="meal-cards-grid"> {/* Apply class name here */}
         <MealCard 

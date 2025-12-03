@@ -7,3 +7,4 @@ kfood.zip
 kfood/
 food_project/checkpoints_convnext_stratified/
 db.sqlite3
+chroma_db_data/
