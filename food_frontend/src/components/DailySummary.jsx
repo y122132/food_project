@@ -35,7 +35,7 @@ export default function DailySummary({ meals, recommendedKcal = 2000 }) {
     return total;
   }, [meals]);
 
-  const totalKcal = totalNutrition ? totalNutrition['에너지(kcal)'] || 0 : 0;
+  const totalKcal = totalNutrition ? totalNutrition['energy_kcal'] || 0 : 0;
   const kcalPercent = useMemo(() => {
     if (!totalKcal || !recommendedKcal) return 0;
     return Math.round((totalKcal / recommendedKcal) * 100);
@@ -44,9 +44,9 @@ export default function DailySummary({ meals, recommendedKcal = 2000 }) {
   const macroPieData = useMemo(() => {
     if (!totalNutrition) return [];
     return [
-      { name: '탄수화물(g)', value: totalNutrition['탄수화물(g)'] || 0 },
-      { name: '단백질(g)', value: totalNutrition['단백질(g)'] || 0 },
-      { name: '지방(g)', value: totalNutrition['지방(g)'] || 0 },
+      { name: '탄수화물(g)', value: totalNutrition['carbohydrate_g'] || 0 },
+      { name: '단백질(g)', value: totalNutrition['protein_g'] || 0 },
+      { name: '지방(g)', value: totalNutrition['fat_g'] || 0 },
     ].filter(item => item.value > 0);
   }, [totalNutrition]);
 

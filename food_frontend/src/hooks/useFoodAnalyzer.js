@@ -2,19 +2,23 @@
 import { useState, useMemo, useCallback } from "react";
 import axios from "axios";
 
-// This is a restored and enhanced version of the hook to manage the 3-step modal workflow.
 export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
   const [step, setStep] = useState(1);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [predClass, setPredClass] = useState("");
   const [foodOptions, setFoodOptions] = useState([]);
-  const [selectedFoodName, setSelectedFoodName] = useState("");
+  
+  // --- REFACTORED STATE ---
+  const [selectedFood, setSelectedFood] = useState(null); // From string to object
+  
   const [weight, setWeight] = useState(200);
-  const [result, setResult] = useState(null); // The result of the last nutrition calculation
-  const [mealItems, setMealItems] = useState([]); // The list of items for the current meal in the modal
+  const [result, setResult] = useState(null);
+  
+  // mealItems will now store a food object
+  const [mealItems, setMealItems] = useState([]); 
+  
   const [editingItemId, setEditingItemId] = useState(null);
-
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -25,7 +29,7 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     setImagePreview(null);
     setPredClass("");
     setFoodOptions([]);
-    setSelectedFoodName("");
+    setSelectedFood(null); // REFACTORED
     setWeight(200);
     setResult(null);
     setMealItems([]);
@@ -41,10 +45,11 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setStep(1);
-      setEditingItemId(null); // New image means we are adding, not editing
+      setEditingItemId(null);
     }
   };
 
+  // --- REFACTORED to handle new API response ---
   const handlePredict = async () => {
     if (!imageFile) {
       alert("이미지를 먼저 선택해 주세요.");
@@ -55,14 +60,14 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     try {
       const formData = new FormData();
       formData.append("image", imageFile);
-      const { data } = await axios.post(`${API_BASE}/predict/`, formData);
+      const { data } = await axios.post(`${API_BASE}/predict/`, formData, { withCredentials: true });
 
       setPredClass(data.pred_class);
       setFoodOptions(data.food_options || []);
       if (data.food_options && data.food_options.length > 0) {
-        setSelectedFoodName(data.food_options[0]["식품명"]);
+        setSelectedFood(data.food_options[0]); // Store the whole object
       } else {
-        setSelectedFoodName("");
+        setSelectedFood(null);
       }
       setStep(2);
     } catch (err) {
@@ -73,40 +78,41 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     }
   };
   
+  // --- REFACTORED to use food_id ---
   const handleCalcAndAdd = async () => {
-    if (!selectedFoodName) {
-      alert("식품명을 선택해 주세요.");
+    if (!selectedFood) {
+      alert("식품을 선택해 주세요.");
       return;
     }
     setLoading(true);
     setErrorMsg("");
     try {
       const payload = {
-        pred_class: predClass,
-        food_name: selectedFoodName,
+        food_id: selectedFood.id, // Use food_id
         weight_g: Number(weight),
       };
-      const { data } = await axios.post(`${API_BASE}/calc-nutrition/`, payload);
+      const { data } = await axios.post(`${API_BASE}/calc-nutrition/`, payload, { withCredentials: true });
 
-      setResult(data); // Save the result of the single calculation
+      setResult(data);
 
-      // If we are editing an item
+      const newItem = {
+        id: editingItemId ?? Date.now(),
+        food: { // Store partial food object
+            id: data.food_id,
+            representative_name: data.representative_name,
+            food_class: selectedFood.food_class, // PRESERVE food_class for subsequent edits
+        },
+        weight_g: data.input_g,
+        nutrition: data.nutrition,
+      };
+
       if (editingItemId !== null) {
-        setMealItems(prev =>
-          prev.map(item =>
-            item.id === editingItemId
-              ? { ...item, pred_class: data.pred_class, food_name: data.food_name, weight_g: data.input_g, nutrition: data.nutrition }
-              : item
-          )
-        );
-      } else { // If we are adding a new item
-        setMealItems(prev => [
-          ...prev,
-          { id: Date.now(), pred_class: data.pred_class, food_name: data.food_name, weight_g: data.input_g, nutrition: data.nutrition },
-        ]);
+        setMealItems(prev => prev.map(item => item.id === editingItemId ? newItem : item));
+      } else {
+        setMealItems(prev => [...prev, newItem]);
       }
       setEditingItemId(null);
-      setStep(3); // Go to the results view
+      setStep(3);
     } catch (err) {
       console.error("영양 성분 계산 중 오류 발생:", err);
       setErrorMsg("영양 성분 계산 중 오류가 발생했습니다.");
@@ -119,15 +125,28 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     setMealItems((prev) => prev.filter((item) => item.id !== id));
   };
   
+  // --- REFACTORED to use new item structure ---
   const startEditItem = async (item) => {
+    // --- FINAL DEBUG: Inspect the item object when edit is clicked ---
+    console.log("startEditItem called with item:", JSON.stringify(item, null, 2));
+    
     setLoading(true);
     setErrorMsg("");
     try {
-      // Fetch food options for the item's class
-      const { data } = await axios.get(`${API_BASE}/food-options/`, { params: { class: item.pred_class } });
-      setPredClass(item.pred_class);
+      const foodClass = item.food?.food_class;
+      if (!foodClass) {
+        setErrorMsg("음식 분류 정보가 없어 수정할 수 없습니다.");
+        setLoading(false);
+        return;
+      }
+
+      const { data } = await axios.get(`${API_BASE}/food-options/`, { params: { class: foodClass } });
+      setPredClass(foodClass);
       setFoodOptions(data.food_options || data || []);
-      setSelectedFoodName(item.food_name);
+      
+      const fullFoodObject = data.food_options.find(opt => opt.id === item.food.id) || item.food;
+      setSelectedFood(fullFoodObject);
+
       setWeight(item.weight_g);
       setResult(null);
       setEditingItemId(item.id);
@@ -142,11 +161,14 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
 
   const totalNutrition = useMemo(() => {
     if (mealItems.length === 0) return null;
-    const keys = Object.keys(mealItems[0].nutrition || {});
+    const firstItemNutrition = mealItems[0]?.nutrition;
+    if (!firstItemNutrition) return null;
+
+    const keys = Object.keys(firstItemNutrition);
     const total = {};
     for (const key of keys) {
       total[key] = mealItems.reduce((sum, item) => {
-        const v = item.nutrition[key];
+        const v = item.nutrition?.[key];
         return sum + (v == null || isNaN(v) ? 0 : Number(v));
       }, 0);
     }
@@ -155,13 +177,17 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
 
   const macroPieData = useMemo(() => {
     if (!totalNutrition) return [];
+    const carb = totalNutrition['carbohydrate_g'] || 0;
+    const protein = totalNutrition['protein_g'] || 0;
+    const fat = totalNutrition['fat_g'] || 0;
     return [
-      { name: '탄수화물(g)', value: totalNutrition['탄수화물(g)'] || 0 },
-      { name: '단백질(g)', value: totalNutrition['단백질(g)'] || 0 },
-      { name: '지방(g)', value: totalNutrition['지방(g)'] || 0 },
+      { name: '탄수화물(g)', value: carb },
+      { name: '단백질(g)', value: protein },
+      { name: '지방(g)', value: fat },
     ];
   }, [totalNutrition]);
 
+  // --- REFACTORED to send correct payload ---
   const handleSaveMeal = async () => {
     if (!currentUser) {
       alert("식사를 저장하려면 먼저 로그인해야 합니다.");
@@ -172,10 +198,12 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     try {
       const payload = {
         title: mealType || "",
-        total_kcal: totalNutrition ? totalNutrition["에너지(kcal)"] || 0 : 0, // Handle totalNutrition being null if mealItems is empty
-        items: mealItems.map(({ id, ...item }) => item), // Remove client-side id before sending
+        items: mealItems.map(item => ({
+          food_id: item.food.id,
+          weight_g: item.weight_g,
+        })),
       };
-      // If mealItems is empty, the backend will delete the meal itself.
+      
       await axios.post(`${API_BASE}/meals/`, payload, {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
@@ -183,7 +211,8 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       resetState();
     } catch (err) {
       console.error("식사 저장 중 오류 발생:", err);
-      setErrorMsg("식사 저장 중 오류가 발생했습니다.");
+      const serverError = err.response?.data?.detail || "식사 저장 중 오류가 발생했습니다.";
+      setErrorMsg(serverError);
       throw err;
     } finally {
       setSaving(false);
@@ -192,7 +221,8 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
   
   return {
     step, setStep, imageFile, imagePreview, predClass, foodOptions,
-    selectedFoodName, setSelectedFoodName, weight, setWeight, result,
+    selectedFood, setSelectedFood, // REFACTORED
+    weight, setWeight, result,
     mealItems, setMealItems, editingItemId, loading, errorMsg, saving,
     totalNutrition, macroPieData,
     handleImageChange, handlePredict, handleCalcAndAdd, removeMealItem,

@@ -27,7 +27,7 @@ export default function Step3Result({
 
       {result && (
         <p style={{ marginBottom: 12, fontSize: 14, color: "#4b5563" }}>
-          마지막으로 추가/수정한 음식: <strong>{result.food_name}</strong> ({result.input_g} g)
+          마지막으로 추가/수정한 음식: <strong>{result.representative_name}</strong> ({result.input_g} g)
         </p>
       )}
 
@@ -53,10 +53,10 @@ export default function Step3Result({
               <tbody>
                 {mealItems.map((item) => (
                   <tr key={item.id}>
-                    <td style={{ padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>{item.food_name}</td>
+                    <td style={{ padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>{item.food.representative_name}</td>
                     <td style={{ padding: "6px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>{item.weight_g}</td>
                     <td style={{ padding: "6px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>
-                      {item.nutrition["에너지(kcal)"]?.toFixed(1) ?? "-"}
+                      {item.nutrition["energy_kcal"]?.toFixed(1) ?? "-"}
                     </td>
                     <td style={{ padding: "6px 8px", textAlign: "center", borderBottom: "1px solid #e5e7eb" }}>
                       <button onClick={() => startEditItem(item)} style={{ padding: "4px 8px", borderRadius: 999, border: 'none', background: "#dbeafe", color: "#1d4ed8", fontSize: 12, cursor: 'pointer', marginRight: 4 }}>수정</button>
@@ -80,7 +80,7 @@ export default function Step3Result({
             <div style={{ flex: '1 1 200px' }}>
                 <p style={{margin: '0 0 4px 0'}}><strong>총 칼로리</strong></p>
                 <p style={{ fontSize: 24, fontWeight: 'bold', color: '#111827', margin: 0 }}>
-                    {totalNutrition['에너지(kcal)']?.toFixed(0) ?? 0} kcal
+                    {totalNutrition['energy_kcal']?.toFixed(0) ?? 0} kcal
                 </p>
             </div>
             {/* Macronutrient Chart and Details */}

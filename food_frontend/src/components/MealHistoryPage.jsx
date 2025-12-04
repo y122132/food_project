@@ -131,7 +131,7 @@ export default function MealHistoryPage({ apiBase }) {
                       borderBottom: "1px solid #e5e7eb",
                     }}
                   >
-                    {item.food_name}
+                    {item.food?.representative_name || '알 수 없는 음식'}
                   </td>
                   <td
                     style={{

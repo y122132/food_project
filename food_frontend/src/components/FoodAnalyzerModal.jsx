@@ -18,11 +18,12 @@ export default function FoodAnalyzerModal({
 }) {
   const {
     step, setStep, imageFile, imagePreview, predClass, foodOptions,
-    selectedFoodName, setSelectedFoodName, weight, setWeight, result,
+    selectedFood, setSelectedFood, // REFACTORED
+    weight, setWeight, result,
     mealItems, setMealItems, editingItemId, loading, errorMsg, saving,
     totalNutrition, macroPieData,
     handleImageChange, handlePredict, handleCalcAndAdd, removeMealItem,
-    startEditItem, handleSaveMeal, resetState // Removed handleClearAllItems
+    startEditItem, handleSaveMeal, resetState
   } = useFoodAnalyzer({ currentUser, API_BASE, mealType });
 
   // When the modal opens, set the initial state
@@ -59,7 +60,7 @@ export default function FoodAnalyzerModal({
 
   const kcalPercent = useMemo(() => {
     if (!totalNutrition) return 0;
-    const totalKcal = totalNutrition["에너지(kcal)"] || 0;
+    const totalKcal = totalNutrition["energy_kcal"] || 0;
     if (!recommendedKcal) return 0;
     return Math.round((totalKcal / recommendedKcal) * 100);
   }, [totalNutrition, recommendedKcal]);
@@ -116,7 +117,7 @@ export default function FoodAnalyzerModal({
         )}
 
         {step === 2 && (
-          <Step2Select cardStyle={cardStyle} predClass={predClass} foodOptions={foodOptions} selectedFoodName={selectedFoodName} setSelectedFoodName={setSelectedFoodName} weight={weight} setWeight={setWeight} setStep={setStep} handleCalcAndAdd={handleCalcAndAdd} loading={loading} editingItemId={editingItemId} mealItems={mealItems} />
+          <Step2Select cardStyle={cardStyle} predClass={predClass} foodOptions={foodOptions} selectedFood={selectedFood} setSelectedFood={setSelectedFood} weight={weight} setWeight={setWeight} setStep={setStep} handleCalcAndAdd={handleCalcAndAdd} loading={loading} editingItemId={editingItemId} mealItems={mealItems} />
         )}
 
         {step === 3 && (

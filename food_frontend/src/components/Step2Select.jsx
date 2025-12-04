@@ -3,8 +3,8 @@ export default function Step2Select({
   cardStyle,
   predClass,
   foodOptions,
-  selectedFoodName,
-  setSelectedFoodName,
+  selectedFood, // REFACTORED
+  setSelectedFood, // REFACTORED
   weight,
   setWeight,
   setStep,
@@ -45,13 +45,13 @@ export default function Step2Select({
           }}
         >
           {foodOptions.map((opt, idx) => {
-            const name = opt["식품명"];
-            const sub = opt["식품중분류명"];
-            const checked = selectedFoodName === name;
+            const name = opt.representative_name || opt.food_name; // Use representative_name
+            const sub = opt.food_class;
+            const checked = selectedFood?.id === opt.id; // REFACTORED
 
             return (
               <label
-                key={idx}
+                key={opt.id || idx} // Use stable id
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -65,9 +65,9 @@ export default function Step2Select({
                 <input
                   type="radio"
                   name="foodOption"
-                  value={name}
+                  value={opt.id} // REFACTORED
                   checked={checked}
-                  onChange={() => setSelectedFoodName(name)}
+                  onChange={() => setSelectedFood(opt)} // REFACTORED
                   style={{ marginRight: 8 }}
                 />
                 <div>
@@ -147,18 +147,18 @@ export default function Step2Select({
 
         <button
           onClick={handleCalcAndAdd}
-          disabled={loading || !selectedFoodName}
+          disabled={loading || !selectedFood} // REFACTORED
           style={{
             padding: "10px 18px",
             borderRadius: 999,
             border: "none",
             background:
-              loading || !selectedFoodName ? "#9ca3af" : "#16a34a",
+              loading || !selectedFood ? "#9ca3af" : "#16a34a", // REFACTORED
             color: "#ffffff",
             fontWeight: 600,
             fontSize: 14,
             cursor:
-              loading || !selectedFoodName ? "default" : "pointer",
+              loading || !selectedFood ? "default" : "pointer", // REFACTORED
           }}
         >
           {loading
@@ -195,7 +195,7 @@ export default function Step2Select({
           >
             {mealItems.map((item) => (
               <li key={item.id}>
-                {item.food_name} ({item.weight_g} g)
+                {item.food.representative_name} ({item.weight_g} g) {/* REFACTORED */}
               </li>
             ))}
           </ul>
