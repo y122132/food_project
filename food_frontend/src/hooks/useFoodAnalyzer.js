@@ -6,6 +6,11 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
   const [step, setStep] = useState(1);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  
+  // --- Multi-Food Detection State ---
+  const [detectedList, setDetectedList] = useState([]);
+  const [currentFoodIndex, setCurrentFoodIndex] = useState(0);
+
   const [predClass, setPredClass] = useState("");
   const [foodOptions, setFoodOptions] = useState([]);
   
@@ -27,6 +32,8 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     setStep(startStep);
     setImageFile(null);
     setImagePreview(null);
+    setDetectedList([]);
+    setCurrentFoodIndex(0);
     setPredClass("");
     setFoodOptions([]);
     setSelectedFood(null); // REFACTORED
@@ -62,14 +69,27 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       formData.append("image", imageFile);
       const { data } = await axios.post(`${API_BASE}/predict/`, formData, { withCredentials: true });
 
-      setPredClass(data.pred_class);
-      setFoodOptions(data.food_options || []);
-      if (data.food_options && data.food_options.length > 0) {
-        setSelectedFood(data.food_options[0]); // Store the whole object
+      // Handle new response structure: { "detected_foods": [...] }
+      const detections = data.detected_foods || [];
+      setDetectedList(detections);
+      
+      if (detections.length > 0) {
+        // Load the first detection
+        const firstItem = detections[0];
+        setCurrentFoodIndex(0);
+        setPredClass(firstItem.pred_class);
+        setFoodOptions(firstItem.food_options || []);
+        
+        if (firstItem.food_options && firstItem.food_options.length > 0) {
+          setSelectedFood(firstItem.food_options[0]);
+        } else {
+          setSelectedFood(null);
+        }
+        setStep(2);
       } else {
-        setSelectedFood(null);
+        setErrorMsg("음식을 탐지하지 못했습니다.");
       }
-      setStep(2);
+
     } catch (err) {
       console.error(err);
       setErrorMsg("이미지 분석 중 오류가 발생했습니다.");
@@ -78,7 +98,7 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     }
   };
   
-  // --- REFACTORED to use food_id ---
+  // --- REFACTORED to use food_id and iterate detectedList ---
   const handleCalcAndAdd = async () => {
     if (!selectedFood) {
       alert("식품을 선택해 주세요.");
@@ -107,12 +127,34 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       };
 
       if (editingItemId !== null) {
+        // Editing an existing item
         setMealItems(prev => prev.map(item => item.id === editingItemId ? newItem : item));
+        setEditingItemId(null);
+        setStep(3);
       } else {
+        // Adding a new item from the detection list
         setMealItems(prev => [...prev, newItem]);
+
+        // Check if there are more items in the detected list
+        const nextIndex = currentFoodIndex + 1;
+        if (nextIndex < detectedList.length) {
+            // Move to next detected item
+            const nextItem = detectedList[nextIndex];
+            setCurrentFoodIndex(nextIndex);
+            setPredClass(nextItem.pred_class);
+            setFoodOptions(nextItem.food_options || []);
+            if (nextItem.food_options && nextItem.food_options.length > 0) {
+                setSelectedFood(nextItem.food_options[0]);
+            } else {
+                setSelectedFood(null);
+            }
+            setWeight(200); // Reset weight
+            // Stay on Step 2
+        } else {
+            // All items processed
+            setStep(3);
+        }
       }
-      setEditingItemId(null);
-      setStep(3);
     } catch (err) {
       console.error("영양 성분 계산 중 오류 발생:", err);
       setErrorMsg("영양 성분 계산 중 오류가 발생했습니다.");
@@ -219,6 +261,28 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     }
   };
   
+  // --- NEW: Skip current food ---
+  const handleSkip = () => {
+    const nextIndex = currentFoodIndex + 1;
+    if (nextIndex < detectedList.length) {
+        // Move to next detected item
+        const nextItem = detectedList[nextIndex];
+        setCurrentFoodIndex(nextIndex);
+        setPredClass(nextItem.pred_class);
+        setFoodOptions(nextItem.food_options || []);
+        if (nextItem.food_options && nextItem.food_options.length > 0) {
+            setSelectedFood(nextItem.food_options[0]);
+        } else {
+            setSelectedFood(null);
+        }
+        setWeight(200); // Reset weight
+        // Stay on Step 2
+    } else {
+        // All items processed
+        setStep(3);
+    }
+  };
+
   return {
     step, setStep, imageFile, imagePreview, predClass, foodOptions,
     selectedFood, setSelectedFood, // REFACTORED
@@ -226,6 +290,8 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
     mealItems, setMealItems, editingItemId, loading, errorMsg, saving,
     totalNutrition, macroPieData,
     handleImageChange, handlePredict, handleCalcAndAdd, removeMealItem,
-    startEditItem, handleSaveMeal, resetState
+    startEditItem, handleSaveMeal, resetState,
+    // New state exports
+    detectedList, currentFoodIndex, handleSkip // NEW
   };
 }

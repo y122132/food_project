@@ -435,6 +435,8 @@ CKPT_PATH = os.path.join(
     BASE_DIR, "checkpoints_convnext_stratified", "best_model.pt"
 )
 
+from ultralytics import YOLO
+
 # ============================================
 # 2. 모델 / 프로세서 전역 로드
 #    (서버 시작 시 한 번만 실행)
@@ -455,6 +457,10 @@ model.eval()
 
 processor = AutoImageProcessor.from_pretrained(MODEL_NAME)
 
+# YOLO 모델 로드 (없으면 자동 다운로드)
+print("[INFO] Loading YOLO model...")
+yolo_model = YOLO("yolo11n.pt") 
+
 # (선택) “영양성분함량기준” 같은 컬럼이 있다면 쓸 수 있는 파서
 def parse_base_grams(value: str, default: float = 100.0) -> float:
     if not isinstance(value, str):
@@ -471,6 +477,10 @@ def parse_base_grams(value: str, default: float = 100.0) -> float:
 
 def predict_class_from_pil(img: Image.Image) -> str:
     """PIL 이미지 → 대표식품명(food_class) 예측"""
+    # Convert RGBA/P to RGB if necessary
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+        
     inputs = processor(images=img, return_tensors="pt")
     with torch.no_grad():
         logits = model(**inputs).logits
@@ -487,19 +497,26 @@ def get_food_options_by_class(pred_class: str):
 
 
 # ============================================
-# 3. API: 이미지 → 대표식품명 + 식품명 후보
+# 3. API: 이미지 → 대표식품명 + 식품명 후보 (YOLO 다중 객체 탐지 적용)
 # ============================================
 @api_view(["POST"])
 @parser_classes([MultiPartParser, FormParser])
-@permission_classes([IsAuthenticated]) # 이제 DB 조회가 필요하므로 인증된 사용자만
+@permission_classes([IsAuthenticated])
 def predict_food(request):
     """
     POST /api/predict/
     - form-data: image (파일)
     응답:
     {
-      "pred_class": "국밥",
-      "food_options": [{ "id": 1, "representative_name": "...", "food_class": "..." }, ...]
+      "detected_foods": [
+        {
+            "index": 0,
+            "pred_class": "국밥",
+            "food_options": [...],
+            "bbox": [x1, y1, x2, y2]
+        },
+        ...
+      ]
     }
     """
     img_file = request.FILES.get("image")
@@ -509,14 +526,53 @@ def predict_food(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    img = Image.open(img_file).convert("RGB")
-    pred_class = predict_class_from_pil(img)
-    options = get_food_options_by_class(pred_class)
+    try:
+        img = Image.open(img_file).convert("RGB")
+    except Exception as e:
+        return Response({"detail": "이미지 파일을 열 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 1. YOLO로 객체 탐지
+    # conf=0.25 (기본값), save=False, device='cpu' (CUDA 오류 방지)
+    yolo_results = yolo_model(img, verbose=False, device='cpu') 
+    
+    detected_foods = []
+    
+    # 결과가 있고, 탐지된 박스가 1개 이상인 경우
+    if yolo_results and len(yolo_results[0].boxes) > 0:
+        boxes = yolo_results[0].boxes
+        
+        for i, box in enumerate(boxes):
+            # Bounding Box 좌표 (x1, y1, x2, y2)
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            
+            # 이미지 Crop
+            crop_img = img.crop((x1, y1, x2, y2))
+            
+            # Crop된 이미지로 분류 수행
+            pred_class = predict_class_from_pil(crop_img)
+            options = get_food_options_by_class(pred_class)
+            
+            detected_foods.append({
+                "index": i,
+                "pred_class": pred_class,
+                "food_options": options,
+                "bbox": [x1, y1, x2, y2]
+            })
+    
+    # 탐지된 객체가 없으면 전체 이미지를 대상으로 1회 수행 (Fallback)
+    if not detected_foods:
+        pred_class = predict_class_from_pil(img)
+        options = get_food_options_by_class(pred_class)
+        detected_foods.append({
+            "index": 0,
+            "pred_class": pred_class,
+            "food_options": options,
+            "bbox": [0, 0, img.width, img.height]
+        })
 
     return Response(
         {
-            "pred_class": pred_class,
-            "food_options": options,
+            "detected_foods": detected_foods,
         }
     )
 

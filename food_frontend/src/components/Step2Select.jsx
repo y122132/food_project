@@ -12,12 +12,33 @@ export default function Step2Select({
   loading,
   editingItemId,
   mealItems,
+  detectedList = [], // NEW: Default to empty array
+  currentFoodIndex = 0, // NEW
+  handleSkip, // NEW
 }) {
+  
+  // Determine button label based on state
+  let buttonLabel = "한 끼에 추가 & 결과 보기";
+  if (loading) {
+    buttonLabel = "계산 중...";
+  } else if (editingItemId !== null) {
+    buttonLabel = "수정 완료 & 결과 보기";
+  } else if (detectedList.length > 1 && currentFoodIndex < detectedList.length - 1) {
+    buttonLabel = "현재 음식 추가 & 다음 음식으로";
+  }
+
   return (
     <section style={cardStyle}>
       <h2 style={{ fontSize: 20, marginBottom: 8 }}>
         2) 세부 식품 선택 & 섭취 중량 설정
       </h2>
+
+      {/* Progress Indicator for Multi-Detection */}
+      {detectedList.length > 1 && editingItemId === null && (
+        <div style={{ marginBottom: 12, padding: "8px 12px", background: "#e0f2fe", borderRadius: 8, color: "#0369a1", fontWeight: 600, fontSize: 14 }}>
+          탐지된 음식 {currentFoodIndex + 1} / {detectedList.length}
+        </div>
+      )}
 
       <p style={{ marginBottom: 12, color: "#6b7280", fontSize: 14 }}>
         모델이 예측한 대표식품명:{" "}
@@ -145,28 +166,45 @@ export default function Step2Select({
           ← 사진 다시 선택
         </button>
 
-        <button
-          onClick={handleCalcAndAdd}
-          disabled={loading || !selectedFood} // REFACTORED
-          style={{
-            padding: "10px 18px",
-            borderRadius: 999,
-            border: "none",
-            background:
-              loading || !selectedFood ? "#9ca3af" : "#16a34a", // REFACTORED
-            color: "#ffffff",
-            fontWeight: 600,
-            fontSize: 14,
-            cursor:
-              loading || !selectedFood ? "default" : "pointer", // REFACTORED
-          }}
-        >
-          {loading
-            ? "계산 중..."
-            : editingItemId === null
-            ? "한 끼에 추가 & 결과 보기"
-            : "수정 완료 & 결과 보기"}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* Skip Button */}
+          {detectedList.length > 1 && editingItemId === null && (
+            <button
+              onClick={handleSkip}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 999,
+                border: "1px solid #d1d5db",
+                background: "#f3f4f6",
+                color: "#4b5563",
+                fontWeight: 500,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              이 음식 건너뛰기
+            </button>
+          )}
+
+          <button
+            onClick={handleCalcAndAdd}
+            disabled={loading || !selectedFood} // REFACTORED
+            style={{
+              padding: "10px 18px",
+              borderRadius: 999,
+              border: "none",
+              background:
+                loading || !selectedFood ? "#9ca3af" : "#16a34a", // REFACTORED
+              color: "#ffffff",
+              fontWeight: 600,
+              fontSize: 14,
+              cursor:
+                loading || !selectedFood ? "default" : "pointer", // REFACTORED
+            }}
+          >
+            {buttonLabel}
+          </button>
+        </div>
       </div>
 
       {/* 현재 한 끼 요약 */}

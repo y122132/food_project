@@ -23,7 +23,8 @@ export default function FoodAnalyzerModal({
     mealItems, setMealItems, editingItemId, loading, errorMsg, saving,
     totalNutrition, macroPieData,
     handleImageChange, handlePredict, handleCalcAndAdd, removeMealItem,
-    startEditItem, handleSaveMeal, resetState
+    startEditItem, handleSaveMeal, resetState,
+    detectedList, currentFoodIndex, handleSkip // NEW
   } = useFoodAnalyzer({ currentUser, API_BASE, mealType });
 
   // When the modal opens, set the initial state
@@ -117,7 +118,23 @@ export default function FoodAnalyzerModal({
         )}
 
         {step === 2 && (
-          <Step2Select cardStyle={cardStyle} predClass={predClass} foodOptions={foodOptions} selectedFood={selectedFood} setSelectedFood={setSelectedFood} weight={weight} setWeight={setWeight} setStep={setStep} handleCalcAndAdd={handleCalcAndAdd} loading={loading} editingItemId={editingItemId} mealItems={mealItems} />
+          <Step2Select 
+            cardStyle={cardStyle} 
+            predClass={predClass} 
+            foodOptions={foodOptions} 
+            selectedFood={selectedFood} 
+            setSelectedFood={setSelectedFood} 
+            weight={weight} 
+            setWeight={setWeight} 
+            setStep={setStep} 
+            handleCalcAndAdd={handleCalcAndAdd} 
+            loading={loading} 
+            editingItemId={editingItemId} 
+            mealItems={mealItems}
+            detectedList={detectedList} // NEW
+            currentFoodIndex={currentFoodIndex} // NEW
+            handleSkip={handleSkip} // NEW
+          />
         )}
 
         {step === 3 && (
