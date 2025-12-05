@@ -4,6 +4,7 @@ import ProfilePage from "./components/ProfilePage";
 import MealHistoryPage from "./components/MealHistoryPage";
 import AuthBox from "./components/AuthBox";
 import Dashboard from "./components/Dashboard";
+import RiceIcon from "./assets/img/밥_이모티콘.png";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -37,8 +38,9 @@ export default function App() {
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
-              🍱 음식 영양 분석
+            <h1 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight flex items-center gap-2">
+              <img src={RiceIcon} alt="Rice Icon" className="w-10 h-10 inline-block" />
+              음식 영양 분석
             </h1>
             <p className="text-gray-500 text-sm">
               오늘의 식단을 기록하고 총 섭취 칼로리와 영양을 스마트하게 관리하세요.
