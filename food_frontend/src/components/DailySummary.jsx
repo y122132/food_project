@@ -90,7 +90,11 @@ export default function DailySummary({ meals, recommendedKcal = 2000 }) {
                     </Pie>
                     <Tooltip
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                      formatter={(value, name) => [`${value.toFixed(1)}g`, name.split('(')[0]]}
+                      formatter={(value, name) => {
+                        const totalVal = macroPieData.reduce((acc, cur) => acc + cur.value, 0);
+                        const percent = totalVal > 0 ? ((value / totalVal) * 100).toFixed(0) : 0;
+                        return [`${percent}%`, name.split('(')[0]];
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>

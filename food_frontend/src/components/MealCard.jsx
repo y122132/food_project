@@ -12,9 +12,20 @@ export default function MealCard({ title, meal, onManageClick }) {
         <p className="text-3xl font-bold text-gray-900 tracking-tight">
           {mealExists ? `${meal.total_kcal.toFixed(0)}` : '0'} <span className="text-lg font-medium text-gray-500">kcal</span>
         </p>
-        <p className="text-sm text-gray-500 mt-2 leading-relaxed line-clamp-2 min-h-[2.5em]">
-          {foodNames}
-        </p>
+        <div className="mt-3 flex flex-wrap gap-2 min-h-[2.5em]">
+          {mealExists ? (
+            meal.items.map((item, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+              >
+                {item.food?.representative_name || '알 수 없는 음식'}
+              </span>
+            ))
+          ) : (
+            <p className="text-sm text-gray-400">기록된 음식이 없습니다.</p>
+          )}
+        </div>
       </div>
       <div className="mt-6">
         <button
