@@ -4,8 +4,7 @@ import axios from 'axios';
 import MealCard from './MealCard';
 import DailySummary from './DailySummary';
 import FoodAnalyzerModal from './FoodAnalyzerModal';
-import MenuRecommender from './MenuRecommender'; // Import the new component
-import './Dashboard.css'; // Import the new CSS file
+import MenuRecommender from './MenuRecommender';
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -59,7 +58,7 @@ export default function Dashboard({ currentUser, recommendedKcal }) {
     setInitialMealForModal(meal);
     setIsModalOpen(true);
   };
-  
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setActiveMealType(null);
@@ -74,8 +73,8 @@ export default function Dashboard({ currentUser, recommendedKcal }) {
   // --- NEW: Function to call the recommendation API ---
   const handleGetRecommendation = async (query) => {
     const { data } = await axios.post(
-      `${API_BASE}/recommend-menu/`, 
-      { query }, 
+      `${API_BASE}/recommend-menu/`,
+      { query },
       { withCredentials: true }
     );
     return data;
@@ -84,104 +83,63 @@ export default function Dashboard({ currentUser, recommendedKcal }) {
   // New State for Recommender Modal
   const [isRecommenderOpen, setIsRecommenderOpen] = useState(false);
 
-  if (loading) return <div>로딩 중...</div>;
-  if (error && !currentUser) return <div style={{ color: 'red', textAlign: 'center', marginTop: '40px' }}>{error}</div>;
+  if (loading) return <div className="text-center py-10 text-gray-500">로딩 중...</div>;
+  if (error && !currentUser) return <div className="text-center py-10 text-red-500">{error}</div>;
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* AI Recommendation Trigger Button */}
-      <button 
+      <button
         onClick={() => setIsRecommenderOpen(true)}
-        style={{
-          width: '100%',
-          padding: '16px',
-          background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '16px',
-          fontSize: '1.1rem',
-          fontWeight: '600',
-          marginBottom: '24px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          boxShadow: '0 4px 10px rgba(168, 85, 247, 0.3)',
-          transition: 'transform 0.2s ease'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        className="w-full p-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl text-lg font-semibold shadow-lg shadow-purple-200 hover:scale-[1.02] transition-transform duration-200 flex items-center justify-center gap-2"
       >
         <span>✨</span> AI에게 메뉴 추천 받기
       </button>
 
       <DailySummary meals={Object.values(dailyMeals).filter(m => m)} recommendedKcal={recommendedKcal} />
-      <div className="meal-cards-grid"> {/* Apply class name here */}
-        <MealCard 
-          title="아침" 
-          meal={dailyMeals['아침']} 
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <MealCard
+          title="아침"
+          meal={dailyMeals['아침']}
           onManageClick={handleOpenModal}
         />
-        <MealCard 
-          title="점심" 
-          meal={dailyMeals['점심']} 
+        <MealCard
+          title="점심"
+          meal={dailyMeals['점심']}
           onManageClick={handleOpenModal}
         />
-        <MealCard 
-          title="저녁" 
-          meal={dailyMeals['저녁']} 
+        <MealCard
+          title="저녁"
+          meal={dailyMeals['저녁']}
           onManageClick={handleOpenModal}
         />
       </div>
 
       {/* Menu Recommender Modal */}
       {isRecommenderOpen && (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100,
-            backdropFilter: 'blur(4px)'
-        }} onClick={(e) => {
-            if(e.target === e.currentTarget) setIsRecommenderOpen(false);
-        }}>
-            <div style={{
-            background: 'white', 
-            borderRadius: 24,
-            width: '95%', 
-            maxWidth: '800px', 
-            maxHeight: '85vh', 
-            overflowY: 'auto',
-            position: 'relative',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-            }}>
-                <div style={{ padding: '20px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1f2937' }}>AI 메뉴 추천</h3>
-                    <button 
-                        onClick={() => setIsRecommenderOpen(false)}
-                        style={{
-                            background: 'transparent',
-                            border: 'none',
-                            fontSize: '24px',
-                            cursor: 'pointer',
-                            color: '#9ca3af',
-                            padding: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: '50%',
-                            transition: 'background 0.2s'
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.background = '#f3f4f6'}
-                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                        &times;
-                    </button>
-                </div>
-                <div style={{ padding: '20px' }}>
-                    <MenuRecommender onRecommend={handleGetRecommendation} />
-                </div>
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsRecommenderOpen(false);
+          }}
+        >
+          <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl relative flex flex-col">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+              <h3 className="text-xl font-bold text-gray-800">AI 메뉴 추천</h3>
+              <button
+                onClick={() => setIsRecommenderOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
+            <div className="p-6">
+              <MenuRecommender onRecommend={handleGetRecommendation} />
+            </div>
+          </div>
         </div>
       )}
 

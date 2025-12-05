@@ -32,33 +32,16 @@ export default function App() {
   }, []);
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f3f4f6",
-        padding: "24px 12px 40px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 960,
-          margin: "0 auto",
-          fontFamily:
-            "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        }}
-      >
-        <header
-          style={{
-            marginBottom: 24,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+    <div className="min-h-screen bg-gray-50 pb-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        {/* Header Section */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 style={{ fontSize: 28, marginBottom: 4 }}>🍱 음식 영양 분석</h1>
-            <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
-              오늘의 식단을 기록하고 총 섭취 칼로리와 영양을 관리하세요.
+            <h1 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
+              🍱 음식 영양 분석
+            </h1>
+            <p className="text-gray-500 text-sm">
+              오늘의 식단을 기록하고 총 섭취 칼로리와 영양을 스마트하게 관리하세요.
             </p>
           </div>
           <AuthBox
@@ -68,14 +51,8 @@ export default function App() {
           />
         </header>
 
-        <nav
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 20,
-            fontSize: 13,
-          }}
-        >
+        {/* Navigation Tabs */}
+        <nav className="flex space-x-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
           {[
             { id: "dashboard", label: "오늘의 식단" },
             { id: "profile", label: "👤 내 프로필" },
@@ -84,31 +61,35 @@ export default function App() {
             <button
               key={tab.id}
               onClick={() => setCurrentView(tab.id)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 999,
-                border: "1px solid #d1d5db",
-                background: currentView === tab.id ? "#2563eb" : "#ffffff",
-                color: currentView === tab.id ? "#ffffff" : "#4b5563",
-                cursor: "pointer",
-              }}
+              className={`
+                px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap
+                ${currentView === tab.id
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }
+              `}
             >
               {tab.label}
             </button>
           ))}
         </nav>
 
-        {currentView === "dashboard" && <Dashboard currentUser={currentUser} recommendedKcal={recommendedKcal} />}
+        {/* Main Content Area */}
+        <main className="transition-all duration-300 ease-in-out">
+          {currentView === "dashboard" && (
+            <Dashboard currentUser={currentUser} recommendedKcal={recommendedKcal} />
+          )}
 
-        {currentView === "profile" && (
-          <ProfilePage
-            apiBase={API_BASE}
-            currentUser={currentUser}
-            setRecommendedKcal={setRecommendedKcal}
-          />
-        )}
+          {currentView === "profile" && (
+            <ProfilePage
+              apiBase={API_BASE}
+              currentUser={currentUser}
+              setRecommendedKcal={setRecommendedKcal}
+            />
+          )}
 
-        {currentView === "history" && <MealHistoryPage apiBase={API_BASE} />}
+          {currentView === "history" && <MealHistoryPage apiBase={API_BASE} />}
+        </main>
       </div>
     </div>
   );

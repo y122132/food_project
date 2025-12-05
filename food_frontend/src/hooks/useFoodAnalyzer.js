@@ -6,28 +6,28 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
   const [step, setStep] = useState(1);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  
+
   // --- Multi-Food Detection State ---
   const [detectedList, setDetectedList] = useState([]);
   const [currentFoodIndex, setCurrentFoodIndex] = useState(0);
 
   const [predClass, setPredClass] = useState("");
   const [foodOptions, setFoodOptions] = useState([]);
-  
+
   // --- REFACTORED STATE ---
   const [selectedFood, setSelectedFood] = useState(null); // From string to object
-  
+
   const [weight, setWeight] = useState(200);
   const [result, setResult] = useState(null);
-  
+
   // mealItems will now store a food object
-  const [mealItems, setMealItems] = useState([]); 
-  
+  const [mealItems, setMealItems] = useState([]);
+
   const [editingItemId, setEditingItemId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [saving, setSaving] = useState(false);
-  
+
   const resetState = useCallback((startStep = 1) => {
     setStep(startStep);
     setImageFile(null);
@@ -72,14 +72,14 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       // Handle new response structure: { "detected_foods": [...] }
       const detections = data.detected_foods || [];
       setDetectedList(detections);
-      
+
       if (detections.length > 0) {
         // Load the first detection
         const firstItem = detections[0];
         setCurrentFoodIndex(0);
         setPredClass(firstItem.pred_class);
         setFoodOptions(firstItem.food_options || []);
-        
+
         if (firstItem.food_options && firstItem.food_options.length > 0) {
           setSelectedFood(firstItem.food_options[0]);
         } else {
@@ -97,7 +97,7 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       setLoading(false);
     }
   };
-  
+
   // --- REFACTORED to use food_id and iterate detectedList ---
   const handleCalcAndAdd = async () => {
     if (!selectedFood) {
@@ -118,9 +118,9 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       const newItem = {
         id: editingItemId ?? Date.now(),
         food: { // Store partial food object
-            id: data.food_id,
-            representative_name: data.representative_name,
-            food_class: selectedFood.food_class, // PRESERVE food_class for subsequent edits
+          id: data.food_id,
+          representative_name: data.representative_name,
+          food_class: selectedFood.food_class, // PRESERVE food_class for subsequent edits
         },
         weight_g: data.input_g,
         nutrition: data.nutrition,
@@ -138,21 +138,21 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
         // Check if there are more items in the detected list
         const nextIndex = currentFoodIndex + 1;
         if (nextIndex < detectedList.length) {
-            // Move to next detected item
-            const nextItem = detectedList[nextIndex];
-            setCurrentFoodIndex(nextIndex);
-            setPredClass(nextItem.pred_class);
-            setFoodOptions(nextItem.food_options || []);
-            if (nextItem.food_options && nextItem.food_options.length > 0) {
-                setSelectedFood(nextItem.food_options[0]);
-            } else {
-                setSelectedFood(null);
-            }
-            setWeight(200); // Reset weight
-            // Stay on Step 2
+          // Move to next detected item
+          const nextItem = detectedList[nextIndex];
+          setCurrentFoodIndex(nextIndex);
+          setPredClass(nextItem.pred_class);
+          setFoodOptions(nextItem.food_options || []);
+          if (nextItem.food_options && nextItem.food_options.length > 0) {
+            setSelectedFood(nextItem.food_options[0]);
+          } else {
+            setSelectedFood(null);
+          }
+          setWeight(200); // Reset weight
+          // Stay on Step 2
         } else {
-            // All items processed
-            setStep(3);
+          // All items processed
+          setStep(3);
         }
       }
     } catch (err) {
@@ -162,16 +162,16 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       setLoading(false);
     }
   };
-  
+
   const removeMealItem = (id) => {
     setMealItems((prev) => prev.filter((item) => item.id !== id));
   };
-  
+
   // --- REFACTORED to use new item structure ---
   const startEditItem = async (item) => {
     // --- FINAL DEBUG: Inspect the item object when edit is clicked ---
     console.log("startEditItem called with item:", JSON.stringify(item, null, 2));
-    
+
     setLoading(true);
     setErrorMsg("");
     try {
@@ -182,10 +182,13 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
         return;
       }
 
-      const { data } = await axios.get(`${API_BASE}/food-options/`, { params: { class: foodClass } });
+      const { data } = await axios.get(`${API_BASE}/food-options/`, {
+        params: { class: foodClass },
+        withCredentials: true
+      });
       setPredClass(foodClass);
       setFoodOptions(data.food_options || data || []);
-      
+
       const fullFoodObject = data.food_options.find(opt => opt.id === item.food.id) || item.food;
       setSelectedFood(fullFoodObject);
 
@@ -245,7 +248,7 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
           weight_g: item.weight_g,
         })),
       };
-      
+
       await axios.post(`${API_BASE}/meals/`, payload, {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
@@ -260,26 +263,26 @@ export function useFoodAnalyzer({ currentUser, API_BASE, mealType }) {
       setSaving(false);
     }
   };
-  
+
   // --- NEW: Skip current food ---
   const handleSkip = () => {
     const nextIndex = currentFoodIndex + 1;
     if (nextIndex < detectedList.length) {
-        // Move to next detected item
-        const nextItem = detectedList[nextIndex];
-        setCurrentFoodIndex(nextIndex);
-        setPredClass(nextItem.pred_class);
-        setFoodOptions(nextItem.food_options || []);
-        if (nextItem.food_options && nextItem.food_options.length > 0) {
-            setSelectedFood(nextItem.food_options[0]);
-        } else {
-            setSelectedFood(null);
-        }
-        setWeight(200); // Reset weight
-        // Stay on Step 2
+      // Move to next detected item
+      const nextItem = detectedList[nextIndex];
+      setCurrentFoodIndex(nextIndex);
+      setPredClass(nextItem.pred_class);
+      setFoodOptions(nextItem.food_options || []);
+      if (nextItem.food_options && nextItem.food_options.length > 0) {
+        setSelectedFood(nextItem.food_options[0]);
+      } else {
+        setSelectedFood(null);
+      }
+      setWeight(200); // Reset weight
+      // Stay on Step 2
     } else {
-        // All items processed
-        setStep(3);
+      // All items processed
+      setStep(3);
     }
   };
 

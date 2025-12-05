@@ -2,43 +2,30 @@
 import React from 'react';
 
 export default function MealCard({ title, meal, onManageClick }) {
-  const cardStyle = {
-    border: "1px solid #e5e7eb",
-    borderRadius: 16,
-    padding: 20,
-    background: "#ffffff",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.03)",
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-  };
-
   const mealExists = meal && meal.items && meal.items.length > 0;
   const foodNames = mealExists ? meal.items.map(item => item.food_name).join(', ') : '기록된 음식이 없습니다.';
 
   return (
-    <div style={cardStyle}>
+    <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col justify-between h-full">
       <div>
-        <h3 style={{ marginTop: 0, marginBottom: 12 }}>{title}</h3>
-        <p style={{ fontSize: 24, fontWeight: 'bold', color: '#111827', margin: 0 }}>
-          {mealExists ? `${meal.total_kcal.toFixed(0)} kcal` : '0 kcal'}
+        <h3 className="text-lg font-semibold text-gray-800 mb-3">{title}</h3>
+        <p className="text-3xl font-bold text-gray-900 tracking-tight">
+          {mealExists ? `${meal.total_kcal.toFixed(0)}` : '0'} <span className="text-lg font-medium text-gray-500">kcal</span>
         </p>
-        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 8, lineHeight: '1.5em' }}>
+        <p className="text-sm text-gray-500 mt-2 leading-relaxed line-clamp-2 min-h-[2.5em]">
           {foodNames}
         </p>
       </div>
-      <div style={{ marginTop: 16 }}>
-        <button 
+      <div className="mt-6">
+        <button
           onClick={() => onManageClick(title, meal)}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 999,
-            border: '1px solid #d1d5db',
-            background: '#ffffff',
-            cursor: 'pointer',
-            width: '100%',
-            fontWeight: 600,
-          }}
+          className={`
+            w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200
+            ${mealExists
+              ? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+              : 'bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100'
+            }
+          `}
         >
           {mealExists ? '식사 관리' : '+ 식사 기록하기'}
         </button>
