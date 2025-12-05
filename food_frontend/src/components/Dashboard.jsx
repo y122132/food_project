@@ -147,13 +147,13 @@ export default function Dashboard({ currentUser, recommendedKcal }) {
         }}>
             <div style={{
             background: 'white', 
-            borderRadius: 20,
-            width: '90%', 
-            maxWidth: '600px', 
-            maxHeight: '90vh', 
+            borderRadius: 24,
+            width: '95%', 
+            maxWidth: '800px', 
+            maxHeight: '85vh', 
             overflowY: 'auto',
             position: 'relative',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
             }}>
                 <div style={{ padding: '20px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1f2937' }}>AI 메뉴 추천</h3>
