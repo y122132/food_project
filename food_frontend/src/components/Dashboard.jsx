@@ -81,12 +81,41 @@ export default function Dashboard({ currentUser, recommendedKcal }) {
     return data;
   };
 
+  // New State for Recommender Modal
+  const [isRecommenderOpen, setIsRecommenderOpen] = useState(false);
+
   if (loading) return <div>로딩 중...</div>;
   if (error && !currentUser) return <div style={{ color: 'red', textAlign: 'center', marginTop: '40px' }}>{error}</div>;
 
   return (
     <div>
-      <MenuRecommender onRecommend={handleGetRecommendation} /> {/* Pass the function as a prop */}
+      {/* AI Recommendation Trigger Button */}
+      <button 
+        onClick={() => setIsRecommenderOpen(true)}
+        style={{
+          width: '100%',
+          padding: '16px',
+          background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '16px',
+          fontSize: '1.1rem',
+          fontWeight: '600',
+          marginBottom: '24px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          boxShadow: '0 4px 10px rgba(168, 85, 247, 0.3)',
+          transition: 'transform 0.2s ease'
+        }}
+        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      >
+        <span>✨</span> AI에게 메뉴 추천 받기
+      </button>
+
       <DailySummary meals={Object.values(dailyMeals).filter(m => m)} recommendedKcal={recommendedKcal} />
       <div className="meal-cards-grid"> {/* Apply class name here */}
         <MealCard 
@@ -105,6 +134,56 @@ export default function Dashboard({ currentUser, recommendedKcal }) {
           onManageClick={handleOpenModal}
         />
       </div>
+
+      {/* Menu Recommender Modal */}
+      {isRecommenderOpen && (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100,
+            backdropFilter: 'blur(4px)'
+        }} onClick={(e) => {
+            if(e.target === e.currentTarget) setIsRecommenderOpen(false);
+        }}>
+            <div style={{
+            background: 'white', 
+            borderRadius: 20,
+            width: '90%', 
+            maxWidth: '600px', 
+            maxHeight: '90vh', 
+            overflowY: 'auto',
+            position: 'relative',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1f2937' }}>AI 메뉴 추천</h3>
+                    <button 
+                        onClick={() => setIsRecommenderOpen(false)}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            color: '#9ca3af',
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '50%',
+                            transition: 'background 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                        &times;
+                    </button>
+                </div>
+                <div style={{ padding: '20px' }}>
+                    <MenuRecommender onRecommend={handleGetRecommendation} />
+                </div>
+            </div>
+        </div>
+      )}
 
       {isModalOpen && (
         <FoodAnalyzerModal
