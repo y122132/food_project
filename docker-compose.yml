@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL (RDB)
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=yang_db
+      - POSTGRES_USER=yang
+      - POSTGRES_PASSWORD=yang1234
+    networks:
+      - app-network
+
+  # 2. Qdrant (Vector DB)
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333" # 개발 중 확인용 (운영 시 닫거나 내부 통신만 허용 추천)
+    networks:
+      - app-network
+
+  # 3. Backend (Django)
+  backend:
+    build: ./food_project
+    volumes:
+      - ./food_project:/app  # 개발 시 코드 수정 반영 (배포 시 제거 가능)
+      - static_volume:/app/static # static 파일 공유용
+    environment:
+      - DB_HOST=db
+      - DB_NAME=yang_db
+      - DB_USER=yang
+      - DB_PASSWORD=yang1234
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      - db
+      - qdrant
+    networks:
+      - app-network
+
+  # 4. Frontend (React)
+  frontend:
+    build: ./food_frontend
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # 5. Main Nginx (Gateway)
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - static_volume:/app/static # Django static 파일 서빙용
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  static_volume:

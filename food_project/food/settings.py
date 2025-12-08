@@ -31,7 +31,13 @@ SECRET_KEY = 'django-insecure-(u0%+ms)5)*%f_)b&864w#(x)d@nsz-d%724i5j^ll&nz7bd@-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'backend',
+    'ec2-43-201-65-84.ap-northeast-2.compute.amazonaws.com',
+    '43.201.65.84',
+    ]
 
 
 # Application definition
@@ -62,15 +68,20 @@ MIDDLEWARE = [
 
 # ★ react 주소 정확히 하나만 허용 (중복 X)
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    "http://localhost",
+    "http://127.0.0.1",
+    "http://ec2-43-201-65-84.ap-northeast-2.compute.amazonaws.com",
+    "http://43.201.65.84",
 ]
 
 # 프론트에서 쿠키 보내므로 필수
 CORS_ALLOW_CREDENTIALS = True  
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    "http://localhost",
+    "http://127.0.0.1",
+    "http://ec2-43-201-65-84.ap-northeast-2.compute.amazonaws.com",
+    "http://43.201.65.84",
 ]
 
 # preflight 허용
@@ -145,7 +156,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+# 2. 정적 파일을 모을 절대 경로 (★중요★)
+# docker compose에서 '/app/static' 경로를 볼륨으로 잡았으므로,
+# 프로젝트 루트(BASE_DIR) 아래에 'static' 폴더를 만들겠다고 선언하는 것입니다.
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
@@ -155,3 +171,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+qdrant_url = os.getenv('QDRANT_URL')
+
