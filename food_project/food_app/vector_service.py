@@ -68,10 +68,11 @@ def get_qdrant_client():
         # 로컬 디스크 저장 모드 사용
         # 추후 서버 사용 시:
         #qdrant_url = os.getenv('QDRANT_URL')
+        qdrant_url = settings.QDRANT_URL
         if qdrant_url:
             # 환경변수에 URL이 있으면 서버 모드 사용
             print(f"Qdrant 서버({qdrant_url})에 연결합니다.")
-            _qdrant_client = QdrantClient(url=settings.qdrant_url) 
+            _qdrant_client = QdrantClient(url=qdrant_url) 
         else:
             #없으면 로컬 파일 모드 사용
             print(f"Qdrant를 '{QDRANT_PATH}' 경로에서 로드/생성합니다.")

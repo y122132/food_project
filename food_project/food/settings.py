@@ -171,5 +171,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-qdrant_url = os.getenv('QDRANT_URL')
+QDRANT_URL = os.getenv('QDRANT_URL')
 
