@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from food_app.models import Food
-from food_app.vector_service import get_chroma_collection, get_embedding_model, create_document_from_food
+from food_app.vector_service import get_qdrant_client, get_embedding_model, create_document_from_food, COLLECTION_NAME
 import pprint
 
 class Command(BaseCommand):
@@ -36,10 +36,11 @@ class Command(BaseCommand):
             return
 
         # --- 2. Vector DB 상태 확인 ---
-        self.stdout.write(self.style.HTTP_INFO("\n[2/4] Vector DB(ChromaDB) 상태 확인 중..."))
+        self.stdout.write(self.style.HTTP_INFO("\n[2/4] Vector DB(Qdrant) 상태 확인 중..."))
         try:
-            collection = get_chroma_collection()
-            collection_count = collection.count()
+            client = get_qdrant_client()
+            collection_info = client.get_collection(COLLECTION_NAME)
+            collection_count = collection_info.points_count
             self.stdout.write(f"  - Vector DB에 인덱싱된 총 아이템 수: {collection_count}")
 
             if collection_count == 0:
@@ -54,13 +55,19 @@ class Command(BaseCommand):
         # --- 3. Vector DB 데이터 확인 ---
         self.stdout.write(self.style.HTTP_INFO(f"\n[3/4] Vector DB에서 '{TARGET_FOOD_NAME}' (ID: {food_object.id}) 데이터 확인 중..."))
         try:
-            vector_data = collection.get(ids=[str(food_object.id)])
-            if not vector_data or not vector_data.get('documents'):
+            # Qdrant에서 ID로 데이터 조회 (ids 리스트 전달)
+            points = client.retrieve(
+                collection_name=COLLECTION_NAME,
+                ids=[food_object.id]
+            )
+
+            if not points:
                 self.stderr.write(self.style.ERROR(f"  [실패] Vector DB에 ID '{food_object.id}'에 해당하는 데이터가 없습니다."))
                 self.stderr.write(self.style.ERROR("  'index_food_vectors' 명령어가 RDB의 최신 데이터를 반영하지 못한 것 같습니다."))
                 return
 
-            vector_document = vector_data['documents'][0]
+            point = points[0]
+            vector_document = point.payload.get('document', '')
             self.stdout.write("  - Vector DB에 저장된 문서 (일부):")
             self.stdout.write(f"    '{vector_document[:150]}...'")
 
@@ -80,18 +87,21 @@ class Command(BaseCommand):
             model = get_embedding_model()
             query_embedding = model.encode(TEST_QUERY).tolist()
 
-            results = collection.query(
-                query_embeddings=[query_embedding],
-                n_results=5,
-                include=["documents", "distances", "metadatas"]
-            )
+            # Qdrant에 쿼리 실행 (search 메서드 대신 query_points 사용)
+            results = client.query_points(
+                collection_name=COLLECTION_NAME,
+                query=query_embedding,
+                limit=5
+            ).points
             
             self.stdout.write(self.style.SUCCESS("  [성공] 쿼리 실행 완료. 결과:"))
             self.stdout.write("-"*20)
-            pprint.pprint(results)
+            # 결과 출력 형식 개선
+            for res in results:
+                print(f"ID: {res.id}, Score: {res.score:.4f}, Name: {res.payload.get('name')}")
             self.stdout.write("-"*20)
 
-            if not results.get('ids') or not results['ids'][0]:
+            if not results:
                 self.stdout.write(self.style.WARNING("  [분석] 유사한 음식을 찾지 못했습니다. 쿼리와 데이터 간의 의미적 거리가 먼 것으로 보입니다."))
             else:
                 self.stdout.write(self.style.SUCCESS("  [분석] 유사한 음식을 찾았습니다. 검색 로직은 정상적으로 작동하고 있습니다."))

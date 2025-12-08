@@ -61,6 +61,6 @@ tzdata==2025.2
 urllib3==2.5.0
 openai
 python-dotenv
-chromadb
+qdrant-client
 sentence-transformers
 ultralytics

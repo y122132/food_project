@@ -13,8 +13,8 @@ API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
     raise ValueError("OPENAI_API_KEY가 .env 파일에 없습니다.")
 
-INPUT_CSV_PATH = 'food_project/data/클래스별_최종_영양DB.csv'
-OUTPUT_CSV_PATH = 'food_project/data/enriched_food_data_ko.csv'
+INPUT_CSV_PATH = '../data/클래스별_최종_영양DB.csv'
+OUTPUT_CSV_PATH = '../data/enriched_food_data_ko.csv'
 FOOD_NAME_COLUMN = '대표식품명'
 FOOD_NAME_COLUMN_KO = '대표식품명' # Keep consistent column naming
 

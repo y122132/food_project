@@ -1,0 +1,10 @@
+__pycache__/
+*.env
+dist/
+build/
+kfood.zip
+kfood/
+checkpoints_convnext_stratified/
+yolo11n.pt
+db.sqlite3
+qdrant_db_data/

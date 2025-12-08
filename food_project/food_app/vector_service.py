@@ -1,23 +1,25 @@
-import chromadb
 from sentence_transformers import SentenceTransformer
-from typing import List
 import os
 from django.conf import settings # Import Django settings
-from food_app.models import Food 
+from food_app.models import Food
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams
+from typing import List
 
 # --- Configuration ---
-# 프로젝트 루트에 'chroma_db_data'라는 이름으로 절대 경로를 지정합니다.
-CHROMA_PERSIST_DIRECTORY = os.path.join(settings.BASE_DIR, 'chroma_db_data')
+# 프로젝트 루트에 'qdrant_db_data'라는 이름으로 절대 경로를 지정합니다.
+QDRANT_PATH = os.path.join(settings.BASE_DIR, 'qdrant_db_data')
 # 사용할 임베딩 모델
 EMBEDDING_MODEL_NAME = 'jhgan/ko-sroberta-multitask'
-# ChromaDB에서 사용할 컬렉션(테이블과 유사)의 이름
+# Qdrant에서 사용할 컬렉션 이름
 COLLECTION_NAME = 'food_collection'
+# 임베딩 벡터 차원 (jhgan/ko-sroberta-multitask 모델은 768차원)
+VECTOR_DIMENSION = 768
 
 # --- Singleton Instances ---
 # 모델과 클라이언트는 메모리에 한 번만 로드하여 재사용합니다.
 _embedding_model = None
-_chroma_client = None
-_collection = None
+_qdrant_client = None
 
 
 def create_document_from_food(food: Food) -> str:
@@ -53,31 +55,39 @@ def get_embedding_model():
         print("임베딩 모델 로드 완료.")
     return _embedding_model
 
-def get_chroma_collection():
+def get_qdrant_client():
     """
-    ChromaDB 클라이언트와 컬렉션을 초기화하고 반환합니다.
+    Qdrant 클라이언트를 초기화하고 반환합니다.
     (싱글턴 패턴으로 한 번만 초기화)
     """
-    global _chroma_client, _collection
-    if _collection is None:
-        if not os.path.exists(CHROMA_PERSIST_DIRECTORY):
-            os.makedirs(CHROMA_PERSIST_DIRECTORY)
+    global _qdrant_client
+    if _qdrant_client is None:
+        if not os.path.exists(QDRANT_PATH):
+            os.makedirs(QDRANT_PATH)
         
-        print(f"ChromaDB를 '{CHROMA_PERSIST_DIRECTORY}' 경로에서 로드/생성합니다.")
-        # 데이터를 디스크에 저장하는 PersistentClient 사용
-        _chroma_client = chromadb.PersistentClient(path=CHROMA_PERSIST_DIRECTORY)
+        # 로컬 디스크 저장 모드 사용
+        # 추후 서버 사용 시:
+        qdrant_url = os.getenv('QDRANT_URL')
+        if qdrant_url:
+            # 환경변수에 URL이 있으면 서버 모드 사용
+            print(f"Qdrant 서버({qdrant_url})에 연결합니다.")
+            _qdrant_client = QdrantClient(url=qdrant_url) 
+        else:
+            #없으면 로컬 파일 모드 사용
+            print(f"Qdrant를 '{QDRANT_PATH}' 경로에서 로드/생성합니다.")
+            _qdrant_client = QdrantClient(path=QDRANT_PATH)
         
-        # 임베딩 함수 정의
-        # model = get_embedding_model()
-        # embedding_function = chromadb.utils.embedding_functions.SentenceTransformerEmbeddingFunction(model_name=EMBEDDING_MODEL_NAME)
+        if not _qdrant_client.collection_exists(COLLECTION_NAME):
+             print(f"컬렉션 '{COLLECTION_NAME}'을 생성합니다. (차원: {VECTOR_DIMENSION})")
+             _qdrant_client.create_collection(
+                 collection_name=COLLECTION_NAME,
+                 vectors_config=VectorParams(size=VECTOR_DIMENSION, distance=Distance.COSINE),
+             )
+             print("Qdrant 컬렉션 준비 완료.")
+        else:
+             print(f"컬렉션 '{COLLECTION_NAME}'이 이미 존재합니다.")
 
-        print(f"컬렉션 '{COLLECTION_NAME}'을 가져옵니다/생성합니다.")
-        _collection = _chroma_client.get_or_create_collection(
-            name=COLLECTION_NAME,
-            # embedding_function=embedding_function # embedding_function을 지정하면 upsert 시 자동으로 텍스트를 벡터로 변환해줍니다.
-        )
-        print("ChromaDB 컬렉션 준비 완료.")
-    return _collection
+    return _qdrant_client
 
 
 def query_similar_foods(query_text: str, n_results: int = 5) -> List[int]:
@@ -88,20 +98,23 @@ def query_similar_foods(query_text: str, n_results: int = 5) -> List[int]:
     :param n_results: 반환할 결과의 수
     :return: 유사한 음식의 ID 리스트 (예: [101, 25, 432])
     """
-    collection = get_chroma_collection()
+    client = get_qdrant_client()
     model = get_embedding_model()
 
     # 쿼리 텍스트를 벡터로 변환
     query_embedding = model.encode(query_text).tolist()
 
-    # ChromaDB에 쿼리 실행
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=n_results
-    )
+    # Qdrant에 쿼리 실행 (search 메서드 대신 query_points 사용)
+    # 1.16.x 버전 등에서 search가 노출되지 않는 경우 대응
+    search_result = client.query_points(
+        collection_name=COLLECTION_NAME,
+        query=query_embedding,
+        limit=n_results
+    ).points
 
-    # 결과에서 음식 ID (문자열로 저장됨)를 추출하여 정수 리스트로 변환
-    food_ids = [int(id) for id in results['ids'][0]]
+    # 결과에서 음식 ID (payload에 저장됨)를 추출하여 정수 리스트로 변환
+    # Qdrant Point의 id를 음식 ID로 사용했다면 point.id를 사용해도 됨
+    food_ids = [point.id for point in search_result]
     
     print(f"'{query_text}'와 유사한 음식 ID 검색 결과: {food_ids}")
     return food_ids
@@ -111,8 +124,8 @@ if __name__ == '__main__':
     # 이 테스트는 데이터가 인덱싱된 후에 정상적으로 동작합니다.
     print("Vector DB 서비스 테스트 시작...")
     
-    # ChromaDB와 모델 초기화
-    get_chroma_collection()
+    # Qdrant와 모델 초기화
+    get_qdrant_client()
     get_embedding_model()
 
     # 테스트 쿼리

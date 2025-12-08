@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand
 from tqdm import tqdm
 from food_app.models import Food
-from food_app.vector_service import get_chroma_collection, get_embedding_model, create_document_from_food
+from food_app.vector_service import get_qdrant_client, get_embedding_model, create_document_from_food, COLLECTION_NAME
+from qdrant_client.models import PointStruct
 import numpy as np
 
 # 한번에 처리할 데이터 묶음(배치) 크기
@@ -9,14 +10,14 @@ import numpy as np
 BATCH_SIZE = 100
 
 class Command(BaseCommand):
-    help = 'Indexes food data from the database into ChromaDB'
+    help = 'Indexes food data from the database into Qdrant'
 
     def handle(self, *args, **options):
         self.stdout.write("Vector DB 인덱싱 프로세스를 시작합니다...")
 
-        # 1. ChromaDB와 임베딩 모델 로드
+        # 1. Qdrant와 임베딩 모델 로드
         try:
-            collection = get_chroma_collection()
+            client = get_qdrant_client()
             model = get_embedding_model()
         except Exception as e:
             self.stderr.write(self.style.ERROR(f"Vector DB 서비스 초기화 중 오류 발생: {e}"))
@@ -37,22 +38,25 @@ class Command(BaseCommand):
             # 현재 배치의 음식들에 대한 텍스트 문서 생성
             documents = [create_document_from_food(food) for food in batch_foods]
             
-            # ID는 반드시 문자열 형태여야 함
-            ids = [str(food.id) for food in batch_foods]
-            
-            # 메타데이터 생성 (검색 결과 필터링 등에 사용될 수 있음)
-            metadatas = [{'name': food.representative_name} for food in batch_foods]
-            
             # 텍스트 문서를 벡터로 변환 (인코딩)
             embeddings = model.encode(documents, convert_to_numpy=True).tolist()
+            
+            points = []
+            for j, food in enumerate(batch_foods):
+                 points.append(PointStruct(
+                     id=food.id, # Django 모델의 ID (정수형) 사용
+                     vector=embeddings[j],
+                     payload={
+                         "name": food.representative_name,
+                         "document": documents[j] # 필요 시 원본 문서 텍스트 저장
+                     }
+                 ))
 
-            # 4. ChromaDB에 데이터 저장 (upsert)
+            # 4. Qdrant에 데이터 저장 (upsert)
             # 'upsert'는 ID가 존재하면 업데이트, 존재하지 않으면 새로 삽입합니다.
-            collection.upsert(
-                ids=ids,
-                embeddings=embeddings,
-                documents=documents,
-                metadatas=metadatas
+            client.upsert(
+                collection_name=COLLECTION_NAME,
+                points=points
             )
 
         self.stdout.write(self.style.SUCCESS(
