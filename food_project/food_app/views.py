@@ -533,7 +533,7 @@ def predict_food(request):
 
     # 1. YOLO로 객체 탐지
     # conf=0.25 (기본값), save=False, device='cpu' (CUDA 오류 방지)
-    yolo_results = yolo_model(img, verbose=False, device='cpu') 
+    yolo_results = yolo_model(img, verbose=False, device='cpu', conf=.7, iou=.3) 
     
     detected_foods = []
     
