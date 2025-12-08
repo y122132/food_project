@@ -35,8 +35,8 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'backend',
-    'ec2-43-201-65-84.ap-northeast-2.compute.amazonaws.com',
-    '43.201.65.84',
+    'ec2-13-124-14-100.ap-northeast-2.compute.amazonaws.com',
+    '13.124.14.100',
     ]
 
 
@@ -70,8 +70,8 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1",
-    "http://ec2-43-201-65-84.ap-northeast-2.compute.amazonaws.com",
-    "http://43.201.65.84",
+    "http://ec2-13-124-14-100.ap-northeast-2.compute.amazonaws.com",
+    "http://13.124.14.100",
 ]
 
 # 프론트에서 쿠키 보내므로 필수
@@ -80,8 +80,8 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1",
-    "http://ec2-43-201-65-84.ap-northeast-2.compute.amazonaws.com",
-    "http://43.201.65.84",
+    "http://ec2-13-124-14-100.ap-northeast-2.compute.amazonaws.com",
+    "http://13.124.14.100",
 ]
 
 # preflight 허용
@@ -97,13 +97,24 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [],
-        'APP_DIRS': True,
+        'APP_DIRS': False,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+	    # ▼▼▼▼▼ 여기를 수정하거나 추가합니다 ▼▼▼▼▼
+            'loaders': [
+                (
+                    'django.template.loaders.cached.Loader',
+                    [
+                        'django.template.loaders.filesystem.Loader',
+                        'django.template.loaders.app_directories.Loader',
+                    ]
+                ),
+            ],
+            # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
         },
     },
 ]

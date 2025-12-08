@@ -1,8 +1,9 @@
 # [Stage 1] 빌드 단계
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install -g npm@latest && \
+	npm install
 COPY . .
 RUN npm run build
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-export default function AuthBox({ apiBase, currentUser, setCurrentUser }) {
+export default function AuthBox({ currentUser, setCurrentUser }) {
   const [mode, setMode] = useState("login"); // 'login' | 'register'
   const [form, setForm] = useState({ username: "", password: "", email: "" });
   const [msg, setMsg] = useState("");
@@ -11,14 +11,23 @@ export default function AuthBox({ apiBase, currentUser, setCurrentUser }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // ✅ 추가됨: 모드 변경(로그인<->회원가입) 시 입력창 초기화
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+    setForm({ username: "", password: "", email: "" });
+    setMsg("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMsg("");
     try {
+      // ✅ 수정됨: apiBase 변수 대신 '상대 경로' 사용 (/api/...)
+      // Nginx 설정(location /api/)에 맞춰서 경로 앞에 /api를 붙여줍니다.
       const url =
         mode === "login"
-          ? `${apiBase}/auth/login/`
-          : `${apiBase}/auth/register/`;
+          ? `/api/auth/login/`
+          : `/api/auth/register/`;
       const { data } = await axios.post(url, form, {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
@@ -60,8 +69,9 @@ export default function AuthBox({ apiBase, currentUser, setCurrentUser }) {
 
   const handleLogout = async () => {
     try {
+      // ✅ 수정됨: 로그아웃 주소도 상대 경로로 변경
       await axios.post(
-        `${apiBase}/auth/logout/`,
+        `/api/auth/logout/`,
         {},
         { withCredentials: true }
       );
@@ -108,7 +118,7 @@ export default function AuthBox({ apiBase, currentUser, setCurrentUser }) {
     >
       <div style={{ marginBottom: 6 }}>
         <button
-          onClick={() => setMode("login")}
+          onClick={() => handleModeChange("login")} // ✅ 변경됨
           style={{
             padding: "2px 8px",
             borderRadius: 999,
@@ -122,7 +132,7 @@ export default function AuthBox({ apiBase, currentUser, setCurrentUser }) {
           로그인
         </button>
         <button
-          onClick={() => setMode("register")}
+          onClick={() => handleModeChange("register")} // ✅ 변경됨
           style={{
             padding: "2px 8px",
             borderRadius: 999,

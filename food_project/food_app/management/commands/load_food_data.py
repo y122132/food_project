@@ -10,8 +10,8 @@ class Command(BaseCommand):
         self.stdout.write("데이터 로딩 프로세스를 시작합니다...")
 
         # --- 데이터 파일 경로 ---
-        nutrition_db_path = 'food_project/data/클래스별_최종_영양DB.csv'
-        enriched_db_path = 'food_project/data/enriched_food_data_ko.csv'
+        nutrition_db_path = 'data/클래스별_최종_영양DB.csv'
+        enriched_db_path = 'data/enriched_food_data_ko.csv'
 
         # --- CSV 파일 읽기 ---
         try:
